@@ -75,6 +75,7 @@ export class GrpcClient {
         metadata.set("x-bzrk-client-name", this.config.clientName);
       }
 
+      const deadline = new Date(Date.now() + 30000); // 30s timeout
       const call = this.client.ExecuteQuery(
         {
           query,
@@ -82,7 +83,8 @@ export class GrpcClient {
           until: until || "",
           timezone,
         },
-        metadata
+        metadata,
+        { deadline }
       );
 
       const tables: Table[] = [];
