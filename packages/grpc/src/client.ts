@@ -50,12 +50,12 @@ export class GrpcClient {
         enums: Number,
         defaults: true,
         oneofs: true,
-      }
+      },
     );
     const proto = grpc.loadPackageDefinition(packageDef) as any;
     this.client = new proto.query.QueryService(
       this.config.endpoint,
-      grpc.credentials.createInsecure()
+      grpc.credentials.createInsecure(),
     );
   }
 
@@ -64,7 +64,7 @@ export class GrpcClient {
     query: string,
     since?: string,
     until?: string,
-    timezone: string = "UTC"
+    timezone: string = "UTC",
   ): Promise<QueryResponse> {
     return new Promise((resolve, reject) => {
       const metadata = new grpc.Metadata();
@@ -84,7 +84,7 @@ export class GrpcClient {
           timezone,
         },
         metadata,
-        { deadline }
+        { deadline },
       );
 
       const tables: Table[] = [];
@@ -117,9 +117,7 @@ export class GrpcClient {
           };
         } else if (payload === "batch") {
           for (const row of frame.batch.rows || []) {
-            currentRows.push(
-              (row.values || []).map(convertValue)
-            );
+            currentRows.push((row.values || []).map(convertValue));
           }
         } else if (payload === "progress") {
           const p = frame.progress;
@@ -132,11 +130,7 @@ export class GrpcClient {
           };
         } else if (payload === "error") {
           const e = frame.error;
-          reject(
-            new Error(
-              `Query error [${e.code}]: ${e.message || e.title}`
-            )
-          );
+          reject(new Error(`Query error [${e.code}]: ${e.message || e.title}`));
         } else if (payload === "metadata") {
           const m = frame.metadata;
           for (const pf of m.partial_failures || []) {
@@ -181,20 +175,20 @@ export class GrpcClient {
 function convertValue(dyn: any): Value {
   if (!dyn || !dyn.value) return null;
   const key = dyn.value;
-  if (key === "tt_null") return null;
-  if (key === "tt_bool") return dyn.tt_bool;
-  if (key === "tt_int") return Number(dyn.tt_int);
-  if (key === "tt_long") return Number(dyn.tt_long);
-  if (key === "tt_double") return dyn.tt_double;
-  if (key === "tt_string") return dyn.tt_string;
-  if (key === "tt_timestamp") return Number(dyn.tt_timestamp);
-  if (key === "tt_timespan") return Number(dyn.tt_timespan);
-  if (key === "tt_array") {
-    return (dyn.tt_array?.values || []).map(convertValue);
+  if (key === "null_value") return null;
+  if (key === "bool_value") return dyn.bool_value;
+  if (key === "int_value") return Number(dyn.int_value);
+  if (key === "long_value") return Number(dyn.long_value);
+  if (key === "real_value") return dyn.real_value;
+  if (key === "string_value") return dyn.string_value;
+  if (key === "datetime_value") return Number(dyn.datetime_value);
+  if (key === "timespan_value") return Number(dyn.timespan_value);
+  if (key === "array_value") {
+    return (dyn.array_value?.values || []).map(convertValue);
   }
-  if (key === "tt_propertybag") {
+  if (key === "bag_value") {
     const result: Record<string, Value> = {};
-    for (const [k, v] of Object.entries(dyn.tt_propertybag?.properties || {})) {
+    for (const [k, v] of Object.entries(dyn.bag_value?.properties || {})) {
       result[k] = convertValue(v);
     }
     return result;
