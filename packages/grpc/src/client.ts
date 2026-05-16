@@ -83,6 +83,7 @@ export class GrpcClient {
           since: since || "",
           until: until || "",
           timezone,
+          database: { name: this.config.database || "default" },
         },
         metadata,
         { deadline },
