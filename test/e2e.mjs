@@ -21,7 +21,11 @@ const HTTP_TARGET = ENDPOINT.startsWith("http") ? ENDPOINT : `http://${ENDPOINT}
 // Load protos
 const PROTO_DIR = path.resolve(__dirname, "..", "proto");
 const packageDef = protoLoader.loadSync(
-  [path.join(PROTO_DIR, "query.proto"), path.join(PROTO_DIR, "dynamic_value.proto")],
+  [
+    path.join(PROTO_DIR, "query.proto"),
+    path.join(PROTO_DIR, "common_api.proto"),
+    path.join(PROTO_DIR, "dynamic_value.proto"),
+  ],
   { keepCase: true, longs: String, enums: Number, defaults: true, oneofs: true }
 );
 const proto = grpc.loadPackageDefinition(packageDef);
