@@ -42,6 +42,7 @@ export class GrpcClient {
     const packageDef = protoLoader.loadSync(
       [
         path.join(PROTO_DIR, "query.proto"),
+        path.join(PROTO_DIR, "common_api.proto"),
         path.join(PROTO_DIR, "dynamic_value.proto"),
       ],
       {
@@ -82,6 +83,7 @@ export class GrpcClient {
           since: since || "",
           until: until || "",
           timezone,
+          database: { name: this.config.database || "default" },
         },
         metadata,
         { deadline },

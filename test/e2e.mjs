@@ -21,7 +21,11 @@ const HTTP_TARGET = ENDPOINT.startsWith("http") ? ENDPOINT : `http://${ENDPOINT}
 // Load protos
 const PROTO_DIR = path.resolve(__dirname, "..", "proto");
 const packageDef = protoLoader.loadSync(
-  [path.join(PROTO_DIR, "query.proto"), path.join(PROTO_DIR, "dynamic_value.proto")],
+  [
+    path.join(PROTO_DIR, "query.proto"),
+    path.join(PROTO_DIR, "common_api.proto"),
+    path.join(PROTO_DIR, "dynamic_value.proto"),
+  ],
   { keepCase: true, longs: String, enums: Number, defaults: true, oneofs: true }
 );
 const proto = grpc.loadPackageDefinition(packageDef);
@@ -30,7 +34,7 @@ const client = new proto.query.QueryService(GRPC_TARGET, grpc.credentials.create
 function grpcQuery(csl) {
   return new Promise((resolve, reject) => {
     const deadline = new Date(Date.now() + 30000);
-    const call = client.ExecuteQuery({ query: csl, since: "", until: "", timezone: "UTC" }, new grpc.Metadata(), { deadline });
+    const call = client.ExecuteQuery({ query: csl, since: "", until: "", timezone: "UTC", database: { name: "default" } }, new grpc.Metadata(), { deadline });
     const tables = []; let schema = null; let rows = [];
     call.on("data", f => {
       const p = f.payload;

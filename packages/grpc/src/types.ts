@@ -76,4 +76,9 @@ export interface Config {
   username?: string;
   /** Client name sent as x-bzrk-client-name header */
   clientName?: string;
+  /**
+   * Database to resolve unqualified table names against. Sent on every
+   * ExecuteQueryRequest as `database.name`. Defaults to "default".
+   */
+  database?: string;
 }
