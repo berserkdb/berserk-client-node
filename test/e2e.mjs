@@ -34,7 +34,7 @@ const client = new proto.query.QueryService(GRPC_TARGET, grpc.credentials.create
 function grpcQuery(csl) {
   return new Promise((resolve, reject) => {
     const deadline = new Date(Date.now() + 30000);
-    const call = client.ExecuteQuery({ query: csl, since: "", until: "", timezone: "UTC" }, new grpc.Metadata(), { deadline });
+    const call = client.ExecuteQuery({ query: csl, since: "", until: "", timezone: "UTC", database: { name: "default" } }, new grpc.Metadata(), { deadline });
     const tables = []; let schema = null; let rows = [];
     call.on("data", f => {
       const p = f.payload;
