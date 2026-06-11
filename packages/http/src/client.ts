@@ -60,7 +60,7 @@ export class HttpClient {
     const resp = await fetch(`${endpoint}/v2/rest/query`, {
       method: "POST",
       headers,
-      body: JSON.stringify({ csl: query }),
+      body: JSON.stringify({ db: this.config.database ?? "default", csl: query }),
     });
 
     if (!resp.ok) {
