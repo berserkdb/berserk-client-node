@@ -3,9 +3,9 @@
 // live cluster — one `print` query produces a column per value type, and
 // each decoded cell is asserted.
 //
-// Set BERSERK_ENDPOINT to a *direct* query-service endpoint (e.g.
-// query.bzrk.svc.cluster.local:9510). The packaged client has no gateway
-// auth support, so the authenticated edge on :9500 won't work here.
+// Set BERSERK_ENDPOINT to the gateway (e.g. localhost:9500) and
+// BERSERK_TOKEN to a CLI bearer token. To run directly against a query
+// service instead, set BERSERK_GRPC_PREFIX="".
 
 import { strict as assert } from "assert";
 import { GrpcClient } from "@berserkdb/client-grpc";
@@ -64,7 +64,13 @@ const EXPECTED = {
   n: ["int", null],
 };
 
-const client = new GrpcClient({ endpoint: ENDPOINT.replace(/^https?:\/\//, "") });
+const client = new GrpcClient({
+  endpoint: ENDPOINT,
+  token: process.env.BERSERK_TOKEN,
+  ...(process.env.BERSERK_GRPC_PREFIX !== undefined
+    ? { grpcPathPrefix: process.env.BERSERK_GRPC_PREFIX }
+    : {}),
+});
 
 let passed = 0,
   failed = 0;

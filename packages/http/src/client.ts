@@ -35,10 +35,7 @@ export class HttpClient {
   private config: Config;
 
   constructor(config: Config) {
-    this.config = {
-      clientName: "berserk-client-node",
-      ...config,
-    };
+    this.config = { ...config };
   }
 
   /** Execute a query via the ADX v2 REST endpoint. */
@@ -50,11 +47,8 @@ export class HttpClient {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
-    if (this.config.username) {
-      headers["x-bzrk-username"] = this.config.username;
-    }
-    if (this.config.clientName) {
-      headers["x-bzrk-client-name"] = this.config.clientName;
+    if (this.config.token) {
+      headers["Authorization"] = `Bearer ${this.config.token}`;
     }
 
     const resp = await fetch(`${endpoint}/v2/rest/query`, {

@@ -37,7 +37,7 @@ export class GrpcClient {
 
   constructor(config: Config) {
     this.config = {
-      clientName: "berserk-client-node",
+      grpcPathPrefix: "/api/grpc",
       ...config,
     };
 
@@ -55,11 +55,26 @@ export class GrpcClient {
         oneofs: true,
       },
     );
+    // The gateway mounts the gRPC surface under a path prefix
+    // (/api/grpc/query.QueryService/ExecuteQuery). grpc-js derives
+    // method paths from the package definition, so rewrite them
+    // before building the client.
+    const prefix = this.config.grpcPathPrefix ?? "";
+    if (prefix) {
+      for (const def of Object.values(packageDef)) {
+        for (const method of Object.values(def as Record<string, any>)) {
+          if (method && typeof method.path === "string") {
+            method.path = prefix + method.path;
+          }
+        }
+      }
+    }
     const proto = grpc.loadPackageDefinition(packageDef) as any;
-    this.client = new proto.query.QueryService(
-      this.config.endpoint,
-      grpc.credentials.createInsecure(),
-    );
+    const target = this.config.endpoint.replace(/^https?:\/\//, "");
+    const credentials = this.config.endpoint.startsWith("https://")
+      ? grpc.credentials.createSsl()
+      : grpc.credentials.createInsecure();
+    this.client = new proto.query.QueryService(target, credentials);
   }
 
   /** Execute a query and collect all results. */
@@ -71,11 +86,8 @@ export class GrpcClient {
   ): Promise<QueryResponse> {
     return new Promise((resolve, reject) => {
       const metadata = new grpc.Metadata();
-      if (this.config.username) {
-        metadata.set("x-bzrk-username", this.config.username);
-      }
-      if (this.config.clientName) {
-        metadata.set("x-bzrk-client-name", this.config.clientName);
+      if (this.config.token) {
+        metadata.set("authorization", `Bearer ${this.config.token}`);
       }
 
       const deadline = new Date(Date.now() + 30000); // 30s timeout

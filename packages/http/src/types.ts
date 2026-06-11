@@ -70,12 +70,13 @@ export interface VisualizationMetadata {
 
 /** Client configuration. */
 export interface Config {
-  /** Query service endpoint (e.g., "localhost:9510") */
+  /** Gateway endpoint (e.g., "https://berserk.example.com" or
+   * "localhost:9500"). */
   endpoint: string;
-  /** Username sent as x-bzrk-username header */
-  username?: string;
-  /** Client name sent as x-bzrk-client-name header */
-  clientName?: string;
+  /** Bearer token sent as `Authorization` on every request — a CLI
+   * access token or service-principal token minted by the gateway.
+   * Unauthenticated calls are rejected by the gateway. */
+  token?: string;
   /** Database to resolve unqualified table names against. Sent on every
    * request as the required `db` field. Defaults to "default". */
   database?: string;
