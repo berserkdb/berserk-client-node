@@ -14,7 +14,9 @@ import type {
   VisualizationMetadata,
 } from "./types";
 
-const PROTO_DIR = path.resolve(__dirname, "../../proto");
+// Repo-root proto/ — three levels up from both src/ (ts-node) and
+// dist/ (compiled): <pkg>/{src,dist} → <pkg> → packages → root.
+const PROTO_DIR = path.resolve(__dirname, "../../../proto");
 
 const COLUMN_TYPE_MAP: Record<number, ColumnType> = {
   1: "bool",

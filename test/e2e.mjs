@@ -1,5 +1,11 @@
 // End-to-end tests against a live Berserk cluster.
 // Set BERSERK_ENDPOINT to run (e.g., BERSERK_ENDPOINT=http://localhost:9510).
+//
+// To run through a gateway (the authenticated public edge) instead of
+// directly against the query service:
+//   BERSERK_TOKEN        CLI bearer token (gateway device flow)
+//   BERSERK_GRPC_PREFIX  path prefix the gateway mounts gRPC under
+//                        (e.g. /api/grpc)
 
 import * as grpc from "@grpc/grpc-js";
 import * as protoLoader from "@grpc/proto-loader";
@@ -9,6 +15,8 @@ import { strict as assert } from "assert";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ENDPOINT = process.env.BERSERK_ENDPOINT;
+const TOKEN = process.env.BERSERK_TOKEN;
+const GRPC_PREFIX = process.env.BERSERK_GRPC_PREFIX ?? "";
 
 if (!ENDPOINT) {
   console.log("BERSERK_ENDPOINT not set, skipping e2e tests");
@@ -28,13 +36,30 @@ const packageDef = protoLoader.loadSync(
   ],
   { keepCase: true, longs: String, enums: Number, defaults: true, oneofs: true }
 );
+// Gateways mount the gRPC surface under a path prefix (e.g.
+// /api/grpc/query.QueryService/ExecuteQuery). grpc-js derives method
+// paths from the package definition, so rewrite them before building
+// the client.
+if (GRPC_PREFIX) {
+  for (const def of Object.values(packageDef)) {
+    for (const method of Object.values(def)) {
+      if (method && typeof method.path === "string") method.path = GRPC_PREFIX + method.path;
+    }
+  }
+}
 const proto = grpc.loadPackageDefinition(packageDef);
 const client = new proto.query.QueryService(GRPC_TARGET, grpc.credentials.createInsecure());
+
+function authMetadata() {
+  const md = new grpc.Metadata();
+  if (TOKEN) md.set("authorization", `Bearer ${TOKEN}`);
+  return md;
+}
 
 function grpcQuery(csl) {
   return new Promise((resolve, reject) => {
     const deadline = new Date(Date.now() + 30000);
-    const call = client.ExecuteQuery({ query: csl, since: "", until: "", timezone: "UTC", database: { name: "default" } }, new grpc.Metadata(), { deadline });
+    const call = client.ExecuteQuery({ query: csl, since: "", until: "", timezone: "UTC", database: { name: "default" } }, authMetadata(), { deadline });
     const tables = []; let schema = null; let rows = [];
     call.on("data", f => {
       const p = f.payload;
@@ -46,12 +71,12 @@ function grpcQuery(csl) {
           rows.push((r.values || []).map(v => {
             if (!v || !v.value) return null;
             const k = v.value;
-            if (k === "tt_null") return null;
-            if (k === "tt_long") return Number(v.tt_long);
-            if (k === "tt_string") return v.tt_string;
-            if (k === "tt_bool") return v.tt_bool;
-            if (k === "tt_double") return v.tt_double;
-            if (k === "tt_int") return Number(v.tt_int);
+            if (k === "null_value") return null;
+            if (k === "long_value") return Number(v.long_value);
+            if (k === "string_value") return v.string_value;
+            if (k === "bool_value") return v.bool_value;
+            if (k === "real_value") return v.real_value;
+            if (k === "int_value") return Number(v.int_value);
             return v[k];
           }));
         }
@@ -88,11 +113,16 @@ await run("multi_column", async () => {
   assert.deepEqual(r.tables[0].rows[0], [1, "hello", true]);
 });
 
+const httpHeaders = {
+  "Content-Type": "application/json",
+  ...(TOKEN ? { Authorization: `Bearer ${TOKEN}` } : {}),
+};
+
 console.log("\nHTTP tests:");
 await run("simple_query", async () => {
   const resp = await fetch(`${HTTP_TARGET}/v2/rest/query`, {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ csl: "print v = 1" }),
+    method: "POST", headers: httpHeaders,
+    body: JSON.stringify({ db: "default", csl: "print v = 1" }),
   });
   assert.equal(resp.status, 200);
   const frames = await resp.json();
@@ -103,8 +133,8 @@ await run("simple_query", async () => {
 });
 await run("invalid_query", async () => {
   const resp = await fetch(`${HTTP_TARGET}/v2/rest/query`, {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ csl: "this is not valid kql!!!" }),
+    method: "POST", headers: httpHeaders,
+    body: JSON.stringify({ db: "default", csl: "this is not valid kql!!!" }),
   });
   assert.ok(resp.status >= 400, `expected 4xx, got ${resp.status}`);
 });
